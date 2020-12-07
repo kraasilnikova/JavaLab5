@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JPanel;
 import java.awt.event.*;
+import java.util.Stack;
 
 public class GraphicsDisplay extends JPanel
 {
@@ -17,6 +18,15 @@ public class GraphicsDisplay extends JPanel
         int x;
         int y;
         int n;
+    }
+    class Zone
+    {
+        double MAXY;
+        double tmp;
+        double MINY;
+        double MAXX;
+        double MINX;
+        boolean use;
     }
 
     // Список координат точек для построения графика
@@ -44,6 +54,16 @@ public class GraphicsDisplay extends JPanel
     private DecimalFormat formatter = (DecimalFormat) NumberFormat.getInstance();
     private BasicStroke selStroke;
     private int[][] graphicsDataI;
+    private boolean selMode = false;
+    private boolean dragMode = false;
+    private boolean zoom = false;
+    private int mausePX = 0;
+    private int mausePY = 0;
+    private Rectangle2D.Double rect;
+    private double scaleX;
+    private double scaleY;
+    private Zone zone = new Zone();
+    private Stack<Zone> stack = new Stack<Zone>();
 
     public GraphicsDisplay()
     {
@@ -58,6 +78,8 @@ public class GraphicsDisplay extends JPanel
         MouseMotionHandler mouseMotionHandler = new MouseMotionHandler();
         addMouseMotionListener(mouseMotionHandler);
         addMouseListener(mouseMotionHandler);
+        rect = new Rectangle2D.Double();
+        zone.use = false;
     }
 
     // Данный метод вызывается из обработчика элемента меню "Открыть файл с графиком"
@@ -89,6 +111,16 @@ public class GraphicsDisplay extends JPanel
         // Шаг 3 - Определить минимальное и максимальное значения для координат X и Y
         minX = graphicsData[0][0];
         maxX = graphicsData[graphicsData.length-1][0];
+
+        if (zone.use)
+        {
+            minX = zone.MINX;
+        }
+        if (zone.use)
+        {
+            maxX = zone.MAXX;
+        }
+
         minY = graphicsData[0][1];
         maxY = minY;
         for (int i = 1; i<graphicsData.length; i++)
@@ -102,31 +134,61 @@ public class GraphicsDisplay extends JPanel
                 maxY = graphicsData[i][1];
             }
         }
+
+        if (zone.use)
+        {
+            minY = zone.MINY;
+        }
+        if (zone.use)
+        {
+            maxY = zone.MAXY;
+        }
+
         // Шаг 4 - Определить (исходя из размеров окна) масштабы по осям X и Y - сколько пикселов приходится на единицу длины по X и по Y
-        double scaleX = getSize().getWidth() / (maxX - minX);
-        double scaleY = getSize().getHeight() / (maxY - minY);
+        scaleX = 1.0 / (maxX - minX);
+        scaleY = 1.0 / (maxY - minY);
+
+        if (!transform)
+            scaleX *= getSize().getWidth();
+        else
+            scaleX *= getSize().getHeight();
+        if (!transform)
+            scaleY *= getSize().getHeight();
+        else
+            scaleY *= getSize().getWidth();
+        if (transform)
+        {
+            ((Graphics2D) g).rotate(-Math.PI / 2);
+            ((Graphics2D) g).translate(-getHeight(), 0);
+        }
+
         // Шаг 5 - Чтобы изображение было неискажѐнным - масштаб должен быть одинаков
         // Выбираем за основу минимальный
         scale = Math.min(scaleX, scaleY);
         // Шаг 6 - корректировка границ отображаемой области согласно выбранному масштабу
-        if (scale==scaleX)
+        if (!zoom)
         {
-            /* Если за основу был взят масштаб по оси X, значит по оси Y делений меньше,
-             * т.е. подлежащий визуализации диапазон по Y будет меньше высоты окна.
-             * Значит необходимо добавить делений, сделаем это так:
-             * 1) Вычислим, сколько делений влезет по Y при выбранном масштабе - getSize().getHeight()/scale
-             * 2) Вычтем из этого сколько делений требовалось изначально
-             * 3) Набросим по половине недостающего расстояния на maxY и minY
-             */
-            double yIncrement = (getSize().getHeight()/scale - (maxY - minY))/2;
-            maxY += yIncrement;
-            minY -= yIncrement;
-        }
-        if (scale==scaleY)
-        {
-            double xIncrement = (getSize().getWidth()/scale - (maxX - minX))/2;
-            maxX += xIncrement;
-            minX -= xIncrement;
+            if (scale == scaleX)
+            {
+                double yIncrement = 0;
+                if (!transform)
+                    yIncrement = (getSize().getHeight() / scale - (maxY - minY)) / 2;
+                else
+                    yIncrement = (getSize().getWidth() / scale - (maxY - minY)) / 2;
+
+                maxY += yIncrement;
+                minY -= yIncrement;
+            }
+            if (scale == scaleY) {
+                double xIncrement = 0;
+                if (!transform) {
+                    xIncrement = (getSize().getWidth() / scale - (maxX - minX)) / 2;
+                } else {
+                    xIncrement = (getSize().getHeight() / scale - (maxX - minX)) / 2;
+                }
+                maxX += xIncrement;
+                minX -= xIncrement;
+            }
         }
         // Шаг 7 - Сохранить текущие настройки холста
         Graphics2D canvas = (Graphics2D) g;
@@ -163,7 +225,8 @@ public class GraphicsDisplay extends JPanel
         label.append(")");
         FontRenderContext context = canvas.getFontRenderContext();
         Rectangle2D bounds = captionFont.getStringBounds(label.toString(), context);
-        if (!transform) {
+        if (!transform)
+        {
             int dy = -10;
             int dx = +7;
             if (SMP.y < bounds.getHeight())
@@ -171,7 +234,8 @@ public class GraphicsDisplay extends JPanel
             if (getWidth() < bounds.getWidth() + SMP.x + 20)
                 dx = -(int) bounds.getWidth() - 15;
             canvas.drawString(label.toString(), SMP.x + dx, SMP.y + dy);
-        } else {
+        } else
+            {
             int dy = 10;
             int dx = -7;
             if (SMP.x < 10)
@@ -370,8 +434,33 @@ public class GraphicsDisplay extends JPanel
         }
 
         @Override
-        public void mouseDragged(MouseEvent e) {
-
+        public void mouseDragged(MouseEvent e)
+        {
+            if (selMode) {
+                if (!transform)
+                    rect.setFrame(mausePX, mausePY, e.getX() - rect.getX(),
+                            e.getY() - rect.getY());
+                else {
+                    rect.setFrame(-mausePY + getHeight(), mausePX, -e.getY()
+                            + mausePY, e.getX() - mausePX);
+                }
+                repaint();
+            }
+            if (dragMode) {
+                if (!transform) {
+                    if (pointToXY(e.getX(), e.getY()).y < maxY && pointToXY(e.getX(), e.getY()).y > minY) {
+                        graphicsData[SMP.n][1] = pointToXY(e.getX(), e.getY()).y;
+                        SMP.yd = pointToXY(e.getX(), e.getY()).y;
+                        SMP.y = e.getY();
+                    }
+                } else {
+                    if (pointToXY(e.getX(), e.getY()).y < maxY && pointToXY(e.getX(), e.getY()).y > minY) {
+                        graphicsData[SMP.n][1] = pointToXY(e.getX(), e.getY()).y;
+                        SMP.yd = pointToXY(e.getX(), e.getY()).y;
+                        SMP.x = e.getX();
+                    }
+                }
+                repaint();
         }
 
         public void mouseMoved(MouseEvent ev)
@@ -390,8 +479,12 @@ public class GraphicsDisplay extends JPanel
         }
 
         @Override
-        public void mousePressed(MouseEvent e) {
-
+        public void mousePressed(MouseEvent e)
+        {
+            selMode = true;
+            mausePX = e.getX();
+            mausePY = e.getY();
+            rect.setFrame(e.getX(), e.getY(), 0, 0);
         }
 
         @Override
