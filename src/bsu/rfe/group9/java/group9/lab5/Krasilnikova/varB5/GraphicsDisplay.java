@@ -511,8 +511,63 @@ public class GraphicsDisplay extends JPanel
         }
 
         @Override
-        public void mouseReleased(MouseEvent e) {
+        public void mouseReleased(MouseEvent e)
+        {
+            rect.setFrame(0, 0, 0, 0);
+            if (e.getButton() != 1)
+            {
+                repaint();
+                return;
+            }
+            if (selMode)
+            {
+                if (!transform)
+                {
+                    if (e.getX() <= mausePX || e.getY() <= mausePY)
+                        return;
+                    int eY = e.getY();
+                    int eX = e.getX();
+                    if (eY > getHeight())
+                        eY = getHeight();
+                    if (eX > getWidth())
+                        eX = getWidth();
+                    double MAXX = pointToXY(eX, 0).x;
+                    double MINX = pointToXY(mausePX, 0).x;
+                    double MAXY = pointToXY(0, mausePY).y;
+                    double MINY = pointToXY(0, eY).y;
+                    stack.push(zone);
+                    zone = new Zone();
+                    zone.use = true;
+                    zone.MAXX = MAXX;
+                    zone.MINX = MINX;
+                    zone.MINY = MINY;
+                    zone.MAXY = MAXY;
+                    selMode = false;
+                    zoom = true;
+                } else
+                    {
+                    if (pointToXY(mausePX, 0).y <= pointToXY(e.getX(), 0).y
+                            || pointToXY(0, e.getY()).x <= pointToXY(0, mausePY).x)
+                        return;
+                    int eY = e.getY();
+                    int eX = e.getX();
+                    if (eY < 0)
+                        eY = 0;
+                    if (eX > getWidth())
+                        eX = getWidth();
+                    stack.push(zone);
+                    zone = new Zone();
+                    zone.use = true;
+                    zone.MAXY = pointToXY(mausePX, 0).y;
+                    zone.MAXX = pointToXY(0, eY).x;
+                    zone.MINX = pointToXY(0, mausePY).x;
+                    zone.MINY = pointToXY(eX, 0).y;
+                    selMode = false;
+                    zoom = true;
+                }
 
+            }
+            repaint();
         }
 
         @Override
