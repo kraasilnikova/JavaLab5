@@ -43,6 +43,7 @@ public class GraphicsDisplay extends JPanel
     private GraphPoint SMP;
     private DecimalFormat formatter = (DecimalFormat) NumberFormat.getInstance();
     private BasicStroke selStroke;
+    private int[][] graphicsDataI;
 
     public GraphicsDisplay()
     {
@@ -54,9 +55,9 @@ public class GraphicsDisplay extends JPanel
         selStroke = new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{8, 8}, 0.0f);
         captionFont = new Font("Serif", Font.BOLD, 10);
 
-        /*MouseMotionHandler mouseMotionHandler = new MouseMotionHandler();
+        MouseMotionHandler mouseMotionHandler = new MouseMotionHandler();
         addMouseMotionListener(mouseMotionHandler);
-        addMouseListener(mouseMotionHandler);*/
+        addMouseListener(mouseMotionHandler);
     }
 
     // Данный метод вызывается из обработчика элемента меню "Открыть файл с графиком"
@@ -64,6 +65,7 @@ public class GraphicsDisplay extends JPanel
     {
         // Сохранить массив точек во внутреннем поле класса
         this.graphicsData = graphicsData;
+        graphicsDataI = new int[graphicsData.length][2];
         // Запросить перерисовку компонента, т.е. неявно вызвать paintComponent()
         repaint();
     }
@@ -152,7 +154,7 @@ public class GraphicsDisplay extends JPanel
     protected void paintHint(Graphics2D canvas)
     {
         Color oldColor = canvas.getColor();
-        canvas.setColor(Color.GREEN);
+        canvas.setColor(Color.DARK_GRAY);
         StringBuffer label = new StringBuffer();
         label.append("(X = ");
         label.append(formatter.format((SMP.xd)));
@@ -192,10 +194,19 @@ public class GraphicsDisplay extends JPanel
          * следующими точками
          */
         GeneralPath graphics = new GeneralPath();
-        for (int i=0; i<graphicsData.length; i++)
+        for (int i = 0; i < graphicsData.length; i++)
         {
             // Преобразовать значения (x,y) в точку на экране point
             Point2D.Double point = xyToPoint(graphicsData[i][0], graphicsData[i][1]);
+            graphicsDataI[i][0] = (int) point.getX();
+            graphicsDataI[i][1] = (int) point.getY();
+            if (transform)
+            {
+                graphicsDataI[i][0] = (int) point.getY();
+                graphicsDataI[i][1] = getHeight() - (int) point.getX();
+            }
+
+
             if (i>0)
             {
                 // Не первая итерация цикла - вести линию в точку point
@@ -320,4 +331,83 @@ public class GraphicsDisplay extends JPanel
         dest.setLocation(src.getX() + deltaX, src.getY() + deltaY);
         return dest;
     }
+
+
+    public class MouseMotionHandler implements MouseMotionListener, MouseListener
+    {
+        private double comparePoint(Point p1, Point p2)
+        {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        private GraphPoint find(int x, int y)
+        {
+            GraphPoint smp = new GraphPoint();
+            GraphPoint smp2 = new GraphPoint();
+            double r, r2 = 1000;
+            for (int i = 0; i < graphicsData.length; i++)
+            {
+                Point p = new Point();
+                p.x = x;
+                p.y = y;
+                Point p2 = new Point();
+                p2.x = graphicsDataI[i][0];
+                p2.y = graphicsDataI[i][1];
+                r = comparePoint(p, p2);
+                if (r < 7.0) {
+                    smp.x = graphicsDataI[i][0];
+                    smp.y = graphicsDataI[i][1];
+                    smp.xd = graphicsData[i][0];
+                    smp.yd = graphicsData[i][1];
+                    smp.n = i;
+                    if (r < r2) {
+                        smp2 = smp;
+                    }
+                    return smp2;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public void mouseDragged(MouseEvent e) {
+
+        }
+
+        public void mouseMoved(MouseEvent ev)
+        {
+            GraphPoint smp;
+            smp = find(ev.getX(), ev.getY());
+            if (smp != null)
+                SMP = smp;
+            else SMP = null;
+            repaint();
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+
+        }
+    }
+
 }
