@@ -412,7 +412,7 @@ public class GraphicsDisplay extends JPanel
             p.y = maxY - maxY * ((double) y / (double) q);
         } else
             {
-            if (!zoom) 
+            if (!zoom)
             {
                 p.y = -x / scale + (maxY);
                 p.x = -y / scale + maxX;
@@ -427,20 +427,16 @@ public class GraphicsDisplay extends JPanel
     }
 
 
-    public class MouseMotionHandler implements MouseMotionListener, MouseListener
-    {
-        private double comparePoint(Point p1, Point p2)
-        {
+    public class MouseMotionHandler implements MouseMotionListener, MouseListener {
+        private double comparePoint(Point p1, Point p2) {
             return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
         }
 
-        private GraphPoint find(int x, int y)
-        {
+        private GraphPoint find(int x, int y) {
             GraphPoint smp = new GraphPoint();
             GraphPoint smp2 = new GraphPoint();
             double r, r2 = 1000;
-            for (int i = 0; i < graphicsData.length; i++)
-            {
+            for (int i = 0; i < graphicsData.length; i++) {
                 Point p = new Point();
                 p.x = x;
                 p.y = y;
@@ -463,17 +459,24 @@ public class GraphicsDisplay extends JPanel
             return null;
         }
 
+        public void mouseMoved(MouseEvent ev) {
+            GraphPoint smp;
+            smp = find(ev.getX(), ev.getY());
+            if (smp != null)
+                SMP = smp;
+            else SMP = null;
+            repaint();
+        }
+
         @Override
-        public void mouseDragged(MouseEvent e)
-        {
+        public void mouseDragged(MouseEvent e) {
             if (selMode) {
                 if (!transform)
                     rect.setFrame(mausePX, mausePY, e.getX() - rect.getX(),
                             e.getY() - rect.getY());
-                else {
+                else
                     rect.setFrame(-mausePY + getHeight(), mausePX, -e.getY()
                             + mausePY, e.getX() - mausePX);
-                }
                 repaint();
             }
             if (dragMode) {
@@ -491,16 +494,7 @@ public class GraphicsDisplay extends JPanel
                     }
                 }
                 repaint();
-        }
-
-        public void mouseMoved(MouseEvent ev)
-        {
-            GraphPoint smp;
-            smp = find(ev.getX(), ev.getY());
-            if (smp != null)
-                SMP = smp;
-            else SMP = null;
-            repaint();
+            }
         }
 
         @Override
@@ -509,8 +503,7 @@ public class GraphicsDisplay extends JPanel
         }
 
         @Override
-        public void mousePressed(MouseEvent e)
-        {
+        public void mousePressed(MouseEvent e) {
             selMode = true;
             mausePX = e.getX();
             mausePY = e.getY();
@@ -532,5 +525,5 @@ public class GraphicsDisplay extends JPanel
 
         }
     }
-
 }
+
