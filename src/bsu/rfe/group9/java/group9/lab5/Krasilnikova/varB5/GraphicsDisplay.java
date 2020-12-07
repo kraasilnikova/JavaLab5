@@ -123,7 +123,7 @@ public class GraphicsDisplay extends JPanel
 
         minY = graphicsData[0][1];
         maxY = minY;
-        for (int i = 1; i<graphicsData.length; i++)
+        for (int i = 1; i < graphicsData.length; i++)
         {
             if (graphicsData[i][1]<minY)
             {
@@ -179,13 +179,13 @@ public class GraphicsDisplay extends JPanel
                 maxY += yIncrement;
                 minY -= yIncrement;
             }
-            if (scale == scaleY) {
+            if (scale == scaleY)
+            {
                 double xIncrement = 0;
-                if (!transform) {
+                if (!transform)
                     xIncrement = (getSize().getWidth() / scale - (maxX - minX)) / 2;
-                } else {
+                else
                     xIncrement = (getSize().getHeight() / scale - (maxX - minX)) / 2;
-                }
                 maxX += xIncrement;
                 minX -= xIncrement;
             }
@@ -206,6 +206,13 @@ public class GraphicsDisplay extends JPanel
         if (showMarkers) paintMarkers(canvas);
         if (SMP != null)
             paintHint(canvas);
+        if (selMode)
+        {
+            canvas.setColor(Color.LIGHT_GRAY);
+            canvas.setStroke(selStroke);
+            canvas.draw(rect);
+        }
+
         // Шаг 9 - Восстановить старые настройки холста
         canvas.setFont(oldFont);
         canvas.setPaint(oldPaint);
@@ -394,6 +401,29 @@ public class GraphicsDisplay extends JPanel
         // Задать еѐ координаты как координаты существующей точки + заданные смещения
         dest.setLocation(src.getX() + deltaX, src.getY() + deltaY);
         return dest;
+    }
+    protected Point2D.Double pointToXY(int x, int y)
+    {
+        Point2D.Double p = new Point2D.Double();
+        if (!transform)
+        {
+            p.x = x / scale + minX;
+            int q = (int) xyToPoint(0, 0).y;
+            p.y = maxY - maxY * ((double) y / (double) q);
+        } else
+            {
+            if (!zoom) 
+            {
+                p.y = -x / scale + (maxY);
+                p.x = -y / scale + maxX;
+            }
+            else
+                {
+                p.y = -x / scaleY + (maxY);
+                p.x = -y / scaleX + maxX;
+            }
+        }
+        return p;
     }
 
 
