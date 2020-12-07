@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JPanel;
 import java.awt.event.*;
+import java.util.EmptyStackException;
 import java.util.Stack;
 
 public class GraphicsDisplay extends JPanel
@@ -498,8 +499,22 @@ public class GraphicsDisplay extends JPanel
         }
 
         @Override
-        public void mouseClicked(MouseEvent e) {
+        public void mouseClicked(MouseEvent e)
+        {
+            if (e.getButton() != 3)
+                return;
 
+            try
+            {
+                zone = stack.pop();
+            }
+            catch (EmptyStackException err)
+            {
+            }
+
+            if (stack.empty())
+                zoom = false;
+            repaint();
         }
 
         @Override
