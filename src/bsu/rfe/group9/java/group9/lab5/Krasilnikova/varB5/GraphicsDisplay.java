@@ -6,9 +6,19 @@ import java.awt.geom.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JPanel;
+import java.awt.event.*;
 
 public class GraphicsDisplay extends JPanel
 {
+    class GraphPoint
+    {
+        double xd;
+        double yd;
+        int x;
+        int y;
+        int n;
+    }
+
     // Список координат точек для построения графика
     private Double[][] graphicsData;
     // Флаговые переменные, задающие правила отображения графика
@@ -27,20 +37,26 @@ public class GraphicsDisplay extends JPanel
     private BasicStroke markerStroke;
     // Различные шрифты отображения надписей
     private Font axisFont;
+
+    private Font captionFont;
+    private boolean transform = false;
+    private GraphPoint SMP;
+    private DecimalFormat formatter = (DecimalFormat) NumberFormat.getInstance();
+    private BasicStroke selStroke;
+
     public GraphicsDisplay()
     {
         setBackground(Color.WHITE);
-        // Перо для рисования графика
-        graphicsStroke = new BasicStroke(5.0f, BasicStroke.CAP_SQUARE,
-                BasicStroke.JOIN_ROUND, 10.0f, new float[] {30, 10, 20, 10, 10, 10, 20, 10}, 0.0f);
-        // Перо для рисования осей координат
-        axisStroke = new BasicStroke(1.0f, BasicStroke.CAP_BUTT,
-                BasicStroke.JOIN_MITER, 10.0f, null, 0.0f);
-        // Перо для рисования контуров маркеров
-        markerStroke = new BasicStroke(3.0f, BasicStroke.CAP_BUTT,
-                BasicStroke.JOIN_MITER, 45.0f, null, 0.0f);
-        // Шрифт для подписей осей координат
+        graphicsStroke = new BasicStroke(5.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_ROUND, 10.0f, new float[] {30, 10, 20, 10, 10, 10, 20, 10}, 0.0f);
+        axisStroke = new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, null, 0.0f);
+        markerStroke = new BasicStroke(3.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 45.0f, null, 0.0f);
         axisFont = new Font("Serif", Font.BOLD, 15);
+        selStroke = new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{8, 8}, 0.0f);
+        captionFont = new Font("Serif", Font.BOLD, 10);
+
+        /*MouseMotionHandler mouseMotionHandler = new MouseMotionHandler();
+        addMouseMotionListener(mouseMotionHandler);
+        addMouseListener(mouseMotionHandler);*/
     }
 
     // Данный метод вызывается из обработчика элемента меню "Открыть файл с графиком"
@@ -124,12 +140,47 @@ public class GraphicsDisplay extends JPanel
         paintGraphics(canvas);
         // Затем (если нужно) отображаются маркеры точек, по которым строился график.
         if (showMarkers) paintMarkers(canvas);
+        if (SMP != null)
+            paintHint(canvas);
         // Шаг 9 - Восстановить старые настройки холста
         canvas.setFont(oldFont);
         canvas.setPaint(oldPaint);
         canvas.setColor(oldColor);
         canvas.setStroke(oldStroke);
     }
+
+    protected void paintHint(Graphics2D canvas)
+    {
+        Color oldColor = canvas.getColor();
+        canvas.setColor(Color.GREEN);
+        StringBuffer label = new StringBuffer();
+        label.append("(X = ");
+        label.append(formatter.format((SMP.xd)));
+        label.append("; Y = ");
+        label.append(formatter.format((SMP.yd)));
+        label.append(")");
+        FontRenderContext context = canvas.getFontRenderContext();
+        Rectangle2D bounds = captionFont.getStringBounds(label.toString(), context);
+        if (!transform) {
+            int dy = -10;
+            int dx = +7;
+            if (SMP.y < bounds.getHeight())
+                dy = +13;
+            if (getWidth() < bounds.getWidth() + SMP.x + 20)
+                dx = -(int) bounds.getWidth() - 15;
+            canvas.drawString(label.toString(), SMP.x + dx, SMP.y + dy);
+        } else {
+            int dy = 10;
+            int dx = -7;
+            if (SMP.x < 10)
+                dx = +13;
+            if (SMP.y < bounds.getWidth() + 20)
+                dy = -(int) bounds.getWidth() - 15;
+            canvas.drawString(label.toString(), getHeight() - SMP.y + dy, SMP.x + dx);
+        }
+        canvas.setColor(oldColor);
+    }
+
     // Отрисовка графика по прочитанным координатам
     protected void paintGraphics(Graphics2D canvas)
     {
